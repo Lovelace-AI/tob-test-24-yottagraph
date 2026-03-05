@@ -1,0 +1,114 @@
+---
+alwaysApply: true
+---
+
+# Aether Architecture
+
+Aether is a modular app framework built on Nuxt 3 + Vue 3 + Vuetify 3 + TypeScript. This is NOT a traditional Nuxt app -- all functionality lives in feature modules, not in pages/ or components/.
+
+**Tech stack**: Nuxt 3 (SPA/Electron), Vue 3 Composition API (`<script setup>`), Vuetify 3, TypeScript (required), Auth0 (automatic).
+
+## Module Structure
+
+```
+features/my-feature/
+├── index.ts         # Module definition (REQUIRED)
+├── pages/           # Feature pages
+├── components/      # Feature-specific components
+├── composables/     # Feature logic
+├── widgets/         # Embeddable widgets (optional)
+└── README.md        # Documentation
+```
+
+Never put business logic in `pages/`, `components/`, or root composables. Those are for infrastructure only. Even home page content should be a feature module imported into `pages/index.vue`.
+
+## Module Definition
+
+Define modules with `defineFeatureModule()` from `~/composables/useModuleRegistry`. Key fields: `id`, `name`, `icon` (root level, not inside navigation), `routes`, `navigation` (use `title` not `label`), `setup()`, `onInstall()`, `onUninstall()`, `requires`, `provides`.
+
+**Navigation gotcha**: If your module doesn't appear in the sidebar, check that `icon` is at root level (not inside `navigation`) and you're using `title` (not `label`).
+
+See `patterns/module-definition.ts` for the full annotated template.
+
+## Registration
+
+Register modules in `plugins/01.module-registry.client.ts` (NOT in `app.vue`):
+
+```typescript
+import { defineNuxtPlugin } from '#app';
+import { useModuleRegistry } from '~/composables/useModuleRegistry';
+import myFeature from '~/features/my-feature';
+
+export default defineNuxtPlugin(() => {
+    const moduleRegistry = useModuleRegistry();
+    moduleRegistry.register(myFeature);
+});
+```
+
+## Event Bus
+
+Always set up event listeners in module `setup()`, never in component lifecycle hooks (`onMounted`, etc.) -- components miss events that fire before they mount.
+
+```typescript
+setup() {
+    const { on, emit } = useModuleBus('my-module');
+    on('entity:selected', (data) => { /* always listening */ });
+}
+```
+
+Event naming: use `feature:action` format (e.g. `entity:selected`, `news:updated`). Never use generic names like `update` or `click`.
+
+## State Management
+
+For state that persists across navigation, use `setup()`:
+
+```typescript
+setup() {
+    const store = reactive({ selectedItems: [], isRunning: false });
+    provide('myFeatureStore', store);
+}
+```
+
+For cross-feature communication, use the event bus (above). For composables, return `readonly()` refs with explicit setters to prevent accidental mutation.
+
+## Naming Conventions
+
+- **Feature directories**: `kebab-case/`
+- **Pages**: `kebab-case.vue`
+- **Components**: `PascalCase.vue`
+- **Composables**: `useCamelCase.ts`
+- **Module definitions**: `index.ts`
+
+## New Feature Checklist
+
+- [ ] Created a feature doc in `design/` (copy `design/feature_template.md`)
+- [ ] Created in `features/` directory with `index.ts` and `README.md`
+- [ ] Uses `FeatureHeader` component (see ui rule)
+- [ ] Declares `requires` and `provides`
+- [ ] Registered in `plugins/01.module-registry.client.ts`
+- [ ] Updated `DESIGN.md`
+- [ ] Uses `markRaw()` for non-reactive objects in registry
+- [ ] Cleans up in `onUnmounted()` / `onUninstall()`
+
+## Debugging
+
+- **Module not showing?** Check registration in plugins file, verify `navigation` object exists
+- **Events not received?** Ensure listener is in module `setup()`, check event names match
+- **State not persisting?** Use module `setup()`, not component state
+
+## Using External Modules
+
+Modules installed from npm/GitHub Packages expose widgets and composables:
+
+```typescript
+import { SomeWidget } from '@yourorg/some-module';
+import { useSomeModule } from '@yourorg/some-module';
+```
+
+External modules are configured the same way as local ones -- register in `plugins/01.module-registry.client.ts`. See the module-workflows rule for install/publish details.
+
+## Electron
+
+The app can run as a standalone Electron desktop app. Use `useElectron()` to detect the environment and access platform APIs (window controls, persistent storage, app version). Build commands: `npm run electron:serve` (dev), `npm run electron:build` (production).
+
+Runtime config in Electron must be changeable after packaging -- use `electron-store` for user-configurable values instead of `.env` files. Most setting changes require an app restart.

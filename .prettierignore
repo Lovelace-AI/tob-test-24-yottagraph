@@ -1,0 +1,7 @@
+# Nuxt build output
+.nuxt/
+.output/
+dist-electron/
+
+# Embedded JSON in TS breaks Prettier's parser
+examples/nuxt-modules/nuxt-module-conversion-example.ts

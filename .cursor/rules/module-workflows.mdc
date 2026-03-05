@@ -1,0 +1,13 @@
+---
+description: Apply when the user mentions publishing, packaging, releasing, version bumping, installing, or adding an Aether module. Covers npm publish, GitHub Packages, and module configuration.
+alwaysApply: false
+---
+
+# Module Workflows
+
+This project has detailed workflows for publishing and installing Aether modules. **Do not proceed without explicit user confirmation.**
+
+- **Publishing** (package a feature from `features/` into `packages/`, publish to GitHub Packages): read and follow `.cursor/commands/publish_module.md`
+- **Installing** (install from GitHub Packages, configure `nuxt.config.ts`, clear caches): read and follow `.cursor/commands/install_module.md`
+
+Never auto-execute these workflows just because trigger phrases were mentioned. If the user is asking questions, answer them. Only run the workflow after explicit confirmation.

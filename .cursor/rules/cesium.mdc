@@ -1,0 +1,49 @@
+---
+description: Apply when working with the Cesium globe, 3D maps, CesiumViewer, geospatial visualization, or the cesium-globe feature module.
+alwaysApply: false
+---
+
+# Cesium Globe Integration
+
+The 3D globe lives in `features/cesium-globe/`. Cesium is loaded dynamically via `loadCesium()` from `~/utils/cesium-loader` -- never import it statically.
+
+## Using the CesiumViewer Component
+
+```typescript
+import { CesiumViewer } from '~/features/cesium-globe';
+```
+
+```vue
+<CesiumViewer
+    ref="cesiumRef"
+    container-id="my-viewer"
+    :initial-view="{ longitude: -73.9, latitude: 40.7, height: 500000 }"
+    @ready="onViewerReady"
+    @click="onGlobeClick"
+    @error="onError"
+/>
+```
+
+The component exposes these methods via template ref:
+
+- `flyTo(longitude, latitude, height?)` -- animate camera to position
+- `addEntity(options)` -- add a Cesium entity, returns the entity
+- `clearEntities()` -- remove all entities
+- `viewer` -- readonly ref to the raw `Cesium.Viewer` instance
+
+## Depending on the Globe from Another Module
+
+```typescript
+export default defineFeatureModule({
+    id: 'my-feature',
+    requires: ['useCesiumViewer'],
+    // ...
+});
+```
+
+## Key Details
+
+- Requires authentication -- the viewer won't initialize without a logged-in user
+- Cesium Ion token is read from `runtimeConfig.public.cesiumAccessToken`
+- Falls back to OpenStreetMap tiles if no Ion token is provided
+- The module exposes a global entity store at `window.__cesiumGlobeStore` for cross-module persistence

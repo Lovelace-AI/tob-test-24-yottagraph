@@ -1,0 +1,60 @@
+{
+    "name": "@aether/hello-world-module",
+    "version": "1.0.0",
+    "description": "Example module for Aether UI framework",
+    "main": "dist/index.js",
+    "module": "dist/index.mjs",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist",
+        "components",
+        "pages",
+        "widgets"
+    ],
+    "exports": {
+        ".": {
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        },
+        "./components": {
+            "import": "./components/index.ts",
+            "types": "./components/index.ts"
+        },
+        "./widgets": {
+            "import": "./widgets/index.ts",
+            "types": "./widgets/index.ts"
+        }
+    },
+    "scripts": {
+        "build": "npm run build:lib && npm run build:types",
+        "build:lib": "vite build --config vite.config.ts",
+        "build:types": "vue-tsc --declaration --emitDeclarationOnly",
+        "dev": "vite",
+        "prepublishOnly": "npm run build"
+    },
+    "peerDependencies": {
+        "vue": "^3.0.0",
+        "vuetify": "^3.0.0",
+        "@nuxt/kit": "^3.0.0"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^5.0.0",
+        "vite": "^5.0.0",
+        "vue-tsc": "^2.0.0",
+        "typescript": "^5.0.0"
+    },
+    "keywords": [
+        "aether",
+        "module",
+        "ui",
+        "vue",
+        "nuxt"
+    ],
+    "author": "Your Name",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/yourorg/aether-hello-world-module"
+    }
+}

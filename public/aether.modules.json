@@ -1,0 +1,12 @@
+{
+    "modules": [
+        {
+            "name": "@example/aether-module-placeholder",
+            "enabled": false,
+            "config": {
+                "apiEndpoint": "/api/custom",
+                "refreshInterval": 30000
+            }
+        }
+    ]
+}

@@ -1,0 +1,74 @@
+---
+description: Apply when writing code that calls the Elemental API, useElementalService, any API endpoints to access data. Contains required patterns for API usage and response parsing.
+alwaysApply: false
+---
+# Elemental API Rules
+
+**Read the OpenAPI spec BEFORE writing any API code.** It is the single source of truth for endpoints, request/response structures, and property names.
+
+- Spec location: `/query/api/specs/elemental-api-spec.json`
+- Generated types: `composables/generated/elemental-service/model`
+- Client implementation: `useElementalService.ts`
+
+## Usage Pattern
+
+All API calls go through `useElementalService()`. Auth0 tokens are included automatically.
+
+```typescript
+const { getNEID, getNamedEntityReport, request } = useElementalService();
+
+// Typed methods (generated from spec via orval):
+const results = await getNEID({ entityName: 'Boeing', maxResults: 10, includeNames: true });
+const report = await getNamedEntityReport(results.neids[0]);
+
+// For endpoints not in the generated client, use request():
+const data = await request('/query', { method: 'POST', body: { nindex: '...' } });
+```
+
+## /query Response Gotcha
+
+Properties are in an **array**, not a key-value object. You must parse them:
+
+```typescript
+// WRONG:
+const industry = entity.industry; // undefined!
+
+// CORRECT:
+const props: Record<string, any> = {};
+for (const p of entity.properties) {
+    props[p.name] = p.stringValue || p.numericValue;
+}
+const industry = props.industry;
+```
+
+Full response shape:
+
+```json
+{
+    "entities": [{
+        "nindex": "2211994177544822955",
+        "label": "ACME CORP",
+        "findex": 1,
+        "properties": [
+            { "name": "industry", "stringValue": "Technology", "numericValue": 0, "confidence": 1 }
+        ]
+    }]
+}
+```
+
+## Other Gotchas
+
+- `/find` returns `{ eids: string[] }`, not `{ entities: [...] }`. Use EIDs with `/query` to get details.
+- Different endpoints have different response shapes -- always check the spec, never assume.
+- Never invent API methods. If it's not on `useElementalService()`, use `request(path, options)`.
+
+## Error Handling
+
+```typescript
+try {
+    const data = await getNEID({ entityName: '...' });
+} catch (error) {
+    console.error('API Error:', error);
+    showError('Failed to load data. Please try again.');
+}
+```

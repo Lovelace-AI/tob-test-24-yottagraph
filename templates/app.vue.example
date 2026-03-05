@@ -1,0 +1,32 @@
+<template>
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
+</template>
+
+<script setup lang="ts">
+import { useModuleRegistry } from './composables/useModuleRegistry';
+
+// Import your features here
+// Example:
+// import entityMonitor from './features/entity-monitor';
+// import newsAnalytics from './features/news-analytics';
+
+const { register } = useModuleRegistry();
+
+onMounted(() => {
+  // Register your features
+  // Example:
+  // register(entityMonitor);
+  // register(newsAnalytics);
+  
+  // For now, just log that the module system is ready
+  console.log('Aether module system initialized');
+});
+
+// Optional: Handle feature registration errors
+const handleRegistrationError = (error: Error, featureName: string) => {
+  console.error(`Failed to register feature ${featureName}:`, error);
+  // Could show a user notification here
+};
+</script>

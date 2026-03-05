@@ -1,0 +1,120 @@
+---
+description: Rules for developing ADK agents in the agents/ directory
+globs: agents/**
+alwaysApply: false
+---
+
+# Agent Development (Google ADK)
+
+This project supports developing and deploying AI agents alongside the UI. Agents live in the `agents/` directory and deploy to Vertex AI Agent Engine via the `/deploy_agent` command.
+
+## Directory Structure
+
+Each agent is a self-contained Python package. **Directory names must use underscores, not hyphens** (ADK uses the directory name as a Python identifier).
+
+```
+agents/my_agent/            # Underscores only! "my-agent" will NOT work.
+├── __init__.py             # Required (can be empty)
+├── agent.py                # Required: must export root_agent
+├── requirements.txt        # Required: must include google-adk
+└── .env                    # Optional: local env vars (git-ignored)
+```
+
+## Writing an Agent
+
+Agents use the [Google Agent Development Kit (ADK)](https://google.github.io/adk-docs/). The core pattern:
+
+```python
+from google.adk.agents import Agent
+
+def my_tool(query: str) -> dict:
+    """Tool docstrings become the LLM's understanding of what the tool does.
+    Be specific about parameters and return values."""
+    # Tool implementation
+    return {"result": "..."}
+
+root_agent = Agent(
+    model="gemini-2.0-flash",
+    name="my_agent",
+    instruction="Clear instructions about the agent's purpose and capabilities.",
+    tools=[my_tool],
+)
+```
+
+Key rules:
+- The `agent.py` file MUST export a variable named `root_agent`
+- Tool functions should have detailed docstrings -- the LLM reads these to understand when and how to use each tool
+- Use `google-adk` for the agent framework, `httpx` for HTTP calls
+- Pin dependency versions in `requirements.txt` for reproducible deployments
+
+## Connecting to the Elemental API
+
+Most agents will query the Elemental yottagraph. Use environment variables for configuration:
+
+```python
+import os
+import httpx
+
+ELEMENTAL_API_URL = os.environ.get("ELEMENTAL_API_URL", "https://stable-query.lovelace.ai")
+ELEMENTAL_API_TOKEN = os.environ.get("ELEMENTAL_API_TOKEN", "")
+```
+
+The Elemental API uses form-encoded POST requests with JSON-encoded parameters:
+
+```python
+resp = httpx.post(
+    f"{ELEMENTAL_API_URL}/elemental/find",
+    data={"expression": '{"type": "natural_language", "natural_language": "ships near Singapore"}', "limit": "10"},
+    headers={"Authorization": f"Bearer {ELEMENTAL_API_TOKEN}", "Content-Type": "application/x-www-form-urlencoded"},
+)
+```
+
+Key endpoints:
+- `GET /elemental/metadata/schema` -- entity types and properties
+- `POST /elemental/find` -- search for entities
+- `POST /elemental/entities/properties` -- get entity property values
+- `GET /entities/lookup?q=<name>` -- look up entity by name
+
+## Local Testing
+
+Test agents locally before deploying. Run `adk web` from the `agents/` directory (NOT from inside the agent folder — ADK discovers agents by scanning subdirectories):
+
+```bash
+cd agents/                  # The PARENT of your agent directories
+pip install -r my_agent/requirements.txt
+
+# Required: tell ADK to use Vertex AI for Gemini
+export GOOGLE_CLOUD_PROJECT=broadchurch
+export GOOGLE_CLOUD_LOCATION=us-central1
+export GOOGLE_GENAI_USE_VERTEXAI=1
+
+# Required: Elemental API access
+export ELEMENTAL_API_URL=https://stable-query.lovelace.ai
+export ELEMENTAL_API_TOKEN=<your-token>
+
+adk web                     # Opens browser UI at http://127.0.0.1:8000/dev-ui/
+```
+
+Select your agent from the dropdown in the web UI. You can also run a single agent directly: `adk run my_agent/`
+
+## Deployment
+
+Deploy with the `/deploy_agent` Cursor command, or manually:
+
+```bash
+adk deploy agent_engine \
+  --project <from broadchurch.yaml> \
+  --region <from broadchurch.yaml> \
+  --staging_bucket <from broadchurch.yaml> \
+  --display_name "<agent-name>" \
+  --trace_to_cloud \
+  agents/<agent-name>/
+```
+
+## Agent Design Guidelines
+
+- Keep agents focused: one agent per domain or task type
+- Write clear, specific instructions -- the LLM follows them literally
+- Tool docstrings are critical: they're the LLM's API documentation
+- Handle errors gracefully in tools: return error messages, don't raise exceptions
+- Use `get_schema` as a discovery tool so the agent can learn about entity types at runtime

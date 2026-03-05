@@ -1,0 +1,63 @@
+---
+description: Apply when working with user preferences, settings persistence, usePrefsStore, the Pref class, Firestore prefs, or app namespacing (NUXT_PUBLIC_APP_ID).
+alwaysApply: false
+---
+
+# User Preferences
+
+The Pref architecture is in place but no preferences are currently implemented. Use this pattern when adding new ones.
+
+Preferences are persisted to Firestore via `usePrefsStore()` from `~/composables/usePrefsStore.ts`, backed by `FirestorePrefsStore` which calls `/api/firestore/*` endpoints. Auth is required.
+
+## Two-Tier Namespacing
+
+Preferences are scoped by the app ID set in `NUXT_PUBLIC_APP_ID`:
+
+- **App-specific**: `/users/{userId}/apps/{appId}/settings/general` -- feature settings, watchlists
+- **Global (cross-app)**: `/users/{userId}/global/settings/general` -- language, accessibility, timezone
+
+## The Pref Class
+
+`Pref<T>` is a reactive wrapper that auto-syncs to Firestore. It's defined in `usePrefsStore.ts`.
+
+```typescript
+const myPref = new Pref<string>(docPath, 'fieldName', 'defaultValue');
+await myPref.initialize();
+
+myPref.r.value; // reactive ref (use in templates)
+myPref.v;       // getter shorthand
+myPref.set('new value'); // persists to Firestore
+```
+
+Values are JSON-serialized in Firestore. The `Pref` sets up a watcher after `initialize()` so any change to `.r` auto-persists.
+
+## usePrefsStore()
+
+```typescript
+const { readDoc, listCollections, listDocuments, deleteCollection } = usePrefsStore();
+```
+
+`initializePrefsStore()` must run first (handled by app startup).
+
+## Module-Level Preferences
+
+Feature modules should namespace under the app's prefix:
+
+```typescript
+function useMyModulePrefs() {
+    const { appId } = useRuntimeConfig().public;
+    const { userId } = useUserState();
+    const path = `/users/${userId.value}/apps/${appId}/modules/my-module`;
+
+    const myPref = new Pref<boolean>(path, 'enabled', true);
+    return { myPref };
+}
+```
+
+## Scope Guidance
+
+| App-specific | Global |
+|---|---|
+| Layout prefs, favorites | Language |
+| Watchlists, feature settings | Accessibility |
+| Module-specific settings | Timezone, notifications |

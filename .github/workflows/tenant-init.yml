@@ -1,0 +1,86 @@
+name: Tenant Init
+on:
+    push:
+        branches: [main]
+        paths: [broadchurch.yaml]
+    repository_dispatch:
+        types: [tenant-init]
+
+jobs:
+    init:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/create-github-app-token@v1
+              id: app-token
+              with:
+                  app-id: ${{ secrets.AETHER_APP_ID }}
+                  private-key: ${{ secrets.AETHER_APP_PRIVATE_KEY }}
+
+            - uses: actions/checkout@v4
+              with:
+                  token: ${{ steps.app-token.outputs.token }}
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+
+            # For repository_dispatch (webhook handler), generate broadchurch.yaml
+            # from the template using the dispatch payload. For push triggers
+            # (portal), broadchurch.yaml was already pushed with real values.
+            - name: Generate broadchurch.yaml (dispatch mode)
+              if: github.event_name == 'repository_dispatch'
+              run: |
+                  if [ -f broadchurch.yaml.template ]; then
+                    sed \
+                      -e 's|{{PROJECT_NAME}}|${{ github.event.client_payload.app_id }}|g' \
+                      -e 's|{{ORG_ID}}|${{ github.event.client_payload.org_id }}|g' \
+                      -e 's|{{SERVICE_ACCOUNT}}|${{ github.event.client_payload.service_account }}|g' \
+                      -e 's|{{QUERY_SERVER_URL}}|${{ github.event.client_payload.query_server }}|g' \
+                      -e 's|{{GATEWAY_URL}}|${{ github.event.client_payload.gateway_url }}|g' \
+                      broadchurch.yaml.template > broadchurch.yaml
+                    rm broadchurch.yaml.template
+                  fi
+
+            - name: Read config from broadchurch.yaml
+              id: config
+              run: |
+                  echo "name=$(yq -r '.tenant.project_name' broadchurch.yaml)" >> "$GITHUB_OUTPUT"
+                  echo "title=$(yq -r '.tenant.display_name // .tenant.project_name' broadchurch.yaml)" >> "$GITHUB_OUTPUT"
+                  echo "query_server=$(yq -r '.query_server.url' broadchurch.yaml)" >> "$GITHUB_OUTPUT"
+                  echo "auth0_client_id=$(yq -r '.auth.client_id // ""' broadchurch.yaml)" >> "$GITHUB_OUTPUT"
+                  echo "auth0_audience=$(yq -r '.auth.audience // "queryserver:api"' broadchurch.yaml)" >> "$GITHUB_OUTPUT"
+
+            - name: Install dependencies
+              run: npm install --ignore-scripts
+
+            - name: Run Aether init
+              run: |
+                  node init-project.js \
+                    --non-interactive \
+                    --name "${{ steps.config.outputs.name }}" \
+                    --id "${{ steps.config.outputs.name }}" \
+                    --title "${{ steps.config.outputs.title }}" \
+                    --description "Aether app: ${{ steps.config.outputs.title }}" \
+                    --query-server "${{ steps.config.outputs.query_server }}" \
+                    --auth0-client-id "${{ steps.config.outputs.auth0_client_id }}" \
+                    --auth0-audience "${{ steps.config.outputs.auth0_audience }}" \
+                    --deploy-target vercel \
+                    --no-include-examples \
+                    --skip-install
+
+            - name: Clean up template file
+              run: rm -f broadchurch.yaml.template
+
+            - name: Format files
+              run: npx prettier --write --ignore-unknown . || true
+
+            - name: Commit initialized project
+              run: |
+                  git config user.name "aether-setup[bot]"
+                  git config user.email "aether-setup[bot]@users.noreply.github.com"
+                  git checkout -- .github/workflows/ .npmrc
+                  git checkout -- broadchurch.yaml 2>/dev/null || true
+                  git add -A
+                  git reset HEAD .github/workflows/
+                  git diff --cached --quiet || git commit --no-verify -m "[Aether] Initialize project: ${{ steps.config.outputs.title }}"
+                  git push

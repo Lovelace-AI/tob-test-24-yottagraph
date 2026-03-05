@@ -1,0 +1,64 @@
+# Node dependencies
+node_modules
+.nuxt
+
+.output
+
+# Environment file
+.env
+.env.local
+.env.*.local
+# Environment files to keep! These are templates or use env vars, not secrets.
+# .env.example - template
+# .npmrc - uses ${NPM_TOKEN}
+
+# Vercel project config (created by `vercel link`, unique per user)
+.vercel/
+
+# Broadchurch tenant config (created by /broadchurch_setup, may contain project-specific settings)
+broadchurch.yaml
+
+# Python virtual environments (for agents and MCP servers)
+agents/*/.venv/
+mcp-servers/*/.venv/
+__pycache__/
+*.pyc
+
+# Generated API clients
+composables/generated/
+query/api/types.ts
+
+# Files copied from npm packages
+query/api/specs/elemental-api-spec.json
+query/api/specs/elemental-api.md
+query/api/specs/README.md
+query/api/specs/.spec-version.json
+
+# Avatar cache
+.cache/
+
+# Electron
+dist-electron/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Platform-specific
+.DS_Store
+Thumbs.db
+
+# Code signing & certificates
+*.p12
+*.pfx
+*.cer
+*.pem
+.env.codesign
+
+# Build artifacts
+build.log
+*.dmg
+*.app
+*.exe
+*.AppImage
+*.deb
