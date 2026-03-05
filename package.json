@@ -1,8 +1,8 @@
 {
-    "name": "aether",
-    "productName": "Aether",
+    "name": "tob-test-24",
+    "productName": "tob-test-24",
     "version": "2.0.0",
-    "description": "Build Lovelace AI applications in minutes, not days. A production-ready modular framework with event-driven architecture.",
+    "description": "Aether app: tob-test-24",
     "main": "electron/main.js",
     "scripts": {
         "dev": "nuxt dev",
