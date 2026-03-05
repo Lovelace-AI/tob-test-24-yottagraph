@@ -1,0 +1,26 @@
+# Broadchurch project configuration
+# Auto-generated during tenant provisioning.
+
+gcp:
+  project: broadchurch
+  region: us-central1
+  staging_bucket: broadchurch-agent-staging
+
+tenant:
+  project_name: "tob-test-24"
+  display_name: "tob-test-24"
+  org_id: "org_cHJH8PDdXXhRljVE"
+  service_account: "tenant-chjh8pddxxhrljve@broadchurch.iam.gserviceaccount.com"
+
+gateway:
+  url: "https://broadchurch-portal-194773164895.us-central1.run.app"
+
+query_server:
+  url: "https://query.news.prod.g.lovelace.ai"
+  audience: "queryserver:api"
+
+auth:
+  client_id: "vzHBwjwWdgkmnRaWT5zabB8uipP5JfBY"
+  audience: "queryserver:api"
+
+agents: {}
